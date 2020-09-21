@@ -23,4 +23,4 @@ bld/
 **/[Pp]ackages/*
 
 # user specific config
-.csproj.user
+*.csproj.user
