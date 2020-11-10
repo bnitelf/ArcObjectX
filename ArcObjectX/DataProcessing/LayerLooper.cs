@@ -64,7 +64,7 @@ namespace ArcObjectX.DataProcessing
         /// <param name="filter"></param>
         /// <param name="readOnly"></param>
         /// <param name="funcLoopBody"></param>
-        /// <returns>Lopped record count.</returns>
+        /// <returns>Looped record count.</returns>
         public static int Loop(IFeatureClass fclass, IQueryFilter filter, bool readOnly, Action<IFeature> funcLoopBody)
         {
             IFeature ft;
@@ -91,7 +91,7 @@ namespace ArcObjectX.DataProcessing
         /// <param name="filter"></param>
         /// <param name="readOnly"></param>
         /// <param name="funcLoopBody"></param>
-        /// <returns>Lopped record count.</returns>
+        /// <returns>Looped record count.</returns>
         public static int Loop(ITable table, IQueryFilter filter, bool readOnly, Action<IRow> funcLoopBody)
         {
             IRow row;
@@ -119,7 +119,7 @@ namespace ArcObjectX.DataProcessing
         /// <param name="filter"></param>
         /// <param name="readOnly"></param>
         /// <param name="funcLoopBody">(feature, current record count)</param>
-        /// <returns></returns>
+        /// <returns>Looped record count.</returns>
         public static int Loop(IFeatureClass fclass, IQueryFilter filter, bool readOnly, Action<IFeature, int> funcLoopBody)
         {
             IFeature ft;
@@ -146,7 +146,7 @@ namespace ArcObjectX.DataProcessing
         /// <param name="filter"></param>
         /// <param name="readOnly"></param>
         /// <param name="funcLoopBody">(row, current record count)</param>
-        /// <returns></returns>
+        /// <returns>Looped record count.</returns>
         public static int Loop(ITable table, IQueryFilter filter, bool readOnly, Action<IRow, int> funcLoopBody)
         {
             IRow row;
