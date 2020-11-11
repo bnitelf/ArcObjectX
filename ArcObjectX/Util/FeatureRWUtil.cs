@@ -13,10 +13,13 @@ namespace ArcObjectX.Util
     {
         #region Config
         // Read field config
+        /// <summary>
+        /// Default false
+        /// </summary>
         public static bool ThrowErrorIfFieldNotFound = false;
 
         /// <summary>
-        /// Skip write to fields.
+        /// Skip write to fields. Default "SHAPE" field only.
         /// </summary>
         public static List<string> SkipFields = new List<string>() { "SHAPE" };
 
@@ -50,7 +53,8 @@ namespace ArcObjectX.Util
 
         #region Read Field
         /// <summary>
-        /// Get string value of the specified fieldName, if field not exist in row or is null value return default;
+        /// Get string value of the specified fieldName, if field not exist in row or is null value return default.
+        /// If data type is not string, null is return.
         /// </summary>
         /// <param name="row"></param>
         /// <param name="fieldName"></param>
@@ -283,7 +287,8 @@ namespace ArcObjectX.Util
 
 
         /// <summary>
-        /// Get string value of the specified fieldName, if field not exist in row or is null value return default;
+        /// Get string value of the specified fieldName, if field not exist in row or is null value return default.
+        /// If data type is not string, null is return.
         /// </summary>
         /// <param name="ft"></param>
         /// <param name="fieldName"></param>
