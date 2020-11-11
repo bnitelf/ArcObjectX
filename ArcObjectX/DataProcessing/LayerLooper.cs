@@ -165,5 +165,66 @@ namespace ArcObjectX.DataProcessing
             }
             return count;
         }
+
+
+        /// <summary>
+        /// Loop feature class, for update purpose. Using IFeatureClass.Update() method.
+        /// By using this method for update, it is faster than updating individual edit IFeature from IFeatureClass.Search() method.
+        /// Because the update is performed on the current 'cursor position'.
+        /// </summary>
+        /// <param name="fclass"></param>
+        /// <param name="filter"></param>
+        /// <param name="recycling"></param>
+        /// <param name="funcLoopBody">argument (feature)</param>
+        /// <returns>Looped record count.</returns>
+        public static int LoopUpdate(IFeatureClass fclass, IQueryFilter filter, bool recycling, Action<IFeature> funcLoopBody)
+        {
+            IFeature ft;
+            int count = 0;
+
+            using (ComReleaser comReleaser = new ComReleaser())
+            {
+                IFeatureCursor cursor = fclass.Update(filter, recycling);
+                comReleaser.ManageLifetime(cursor);
+
+                while ((ft = cursor.NextFeature()) != null)
+                {
+                    count++;
+                    funcLoopBody?.Invoke(ft);
+                }
+            }
+            return count;
+        }
+
+
+        /// <summary>
+        /// Loop feature class, for update purpose. Using IFeatureClass.Update() method.
+        /// By using this method for update, it is faster than updating individual edit IFeature from IFeatureClass.Search() method.
+        /// Because the update is performed on the current 'cursor position'.
+        /// </summary>
+        /// <param name="fclass"></param>
+        /// <param name="filter"></param>
+        /// <param name="recycling"></param>
+        /// <param name="funcLoopBody">argument (feature, count current record)</param>
+        /// <returns>Looped record count.</returns>
+        public static int LoopUpdate(IFeatureClass fclass, IQueryFilter filter, bool recycling, Action<IFeature, int> funcLoopBody)
+        {
+            IFeature ft;
+            int count = 0;
+
+            using (ComReleaser comReleaser = new ComReleaser())
+            {
+                IFeatureCursor cursor = fclass.Update(filter, recycling);
+                comReleaser.ManageLifetime(cursor);
+
+                while ((ft = cursor.NextFeature()) != null)
+                {
+                    count++;
+                    funcLoopBody?.Invoke(ft, count);
+                    cursor.UpdateFeature(ft);
+                }
+            }
+            return count;
+        }
     }
 }
