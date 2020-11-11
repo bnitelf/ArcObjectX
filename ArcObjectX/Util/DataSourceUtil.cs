@@ -632,7 +632,7 @@ namespace ArcObjectX.Util
         /// </summary>
         /// <param name="workspace"></param>
         /// <param name="layerName"></param>
-        public void DeleteLayerIfExist(IWorkspace workspace, string layerName)
+        public static void DeleteLayerIfExist(IWorkspace workspace, string layerName)
         {
             if (((IWorkspace2)workspace).get_NameExists(esriDatasetType.esriDTFeatureClass, layerName))
             {
