@@ -21,7 +21,9 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\ArcObjectX.xml</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -86,6 +88,7 @@
     <Compile Include="DataManagement\SdeConnectionInfo.cs" />
     <Compile Include="DataManagement\TableInfo.cs" />
     <Compile Include="DataManagement\Tool\ArcObjectAppendTool.cs" />
+    <Compile Include="DataManagement\Tool\ArcObjectExportTool.cs" />
     <Compile Include="DataProcessing\LayerLooper.cs" />
     <Compile Include="DataProcessing\SpatialJoin\ISpatialJoinMethod.cs" />
     <Compile Include="DataProcessing\SpatialJoin\SpatialJoinByISpatialFilterMethod.cs" />
