@@ -22,7 +22,7 @@ namespace ArcObjectX.DataManagement
         public static string Shape = "Shape";
 
         /// <summary>
-        /// // Polygon, Line type Layer
+        /// Polygon, Line type Layer (in SDE 
         /// </summary>
         public static string Shape_Length = "Shape_Length";
 

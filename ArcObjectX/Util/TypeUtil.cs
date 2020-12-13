@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace ArcObjectX.Util
 {
+    /// <summary>
+    /// Util class for converting object type to another type that still mean the same thing.
+    /// </summary>
     public class TypeUtil
     {
         /// <summary>
@@ -130,6 +133,12 @@ namespace ArcObjectX.Util
             return sdeConnectionInfo;
         }
 
+        /// <summary>
+        /// Convert IPropertySet to Dictionary for easier access. 
+        /// All keys will be in Upper case.
+        /// </summary>
+        /// <param name="propertySet"></param>
+        /// <returns></returns>
         public static Dictionary<string, string> ToDictionaryIPropertySet(IPropertySet propertySet)
         {
             Dictionary<string, string> dictProperties = new Dictionary<string, string>();
@@ -149,5 +158,6 @@ namespace ArcObjectX.Util
             }
             return dictProperties;
         }
+
     }
 }

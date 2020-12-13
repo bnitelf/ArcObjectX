@@ -392,6 +392,30 @@ namespace ArcObjectX.Util
         }
 
         #region SDE
+
+        /// <summary>
+        /// Return SDE version name if workspace is SDE datasource, otherwise blank.
+        /// </summary>
+        /// <param name="workspace"></param>
+        /// <returns></returns>
+        public static string GetSDEVersionName(IWorkspace workspace)
+        {
+            string versionName = "";
+
+            IPropertySet propertySet = workspace.ConnectionProperties;
+            IVersionedWorkspace versionedWorkspace = workspace as IVersionedWorkspace;
+
+            // IPropertySet not null ทั้ง GDB และ SDE
+            // IVersionedWorkspace มีค่าเมื่อ IWorkspace เป็น SDE workspace (ไม่เกี่ยวกับว่าเราได้ register layer as version หรือไม่)
+            if (propertySet != null && versionedWorkspace != null)
+            {
+                Dictionary<string, string> dictPropertySet = TypeUtil.ToDictionaryIPropertySet(propertySet);
+                versionName = dictPropertySet["VERSION"];
+            }
+           
+            return versionName;
+        }
+
         public static List<string> GetAllSDEVersionName(IWorkspace workspace)
         {
             List<string> versionNames = new List<string>();
@@ -943,7 +967,7 @@ namespace ArcObjectX.Util
         /// <returns></returns>
         public static string GetQualifiedLayerName(SdeConnectionInfo sdeConInfo, string layerName)
         {
-            return $"{sdeConInfo.TableOwner}.{layerName}";
+            return $"{sdeConInfo.DefaultTableOwner}.{layerName}";
         }
 
         /// <summary>
@@ -954,7 +978,7 @@ namespace ArcObjectX.Util
         /// <returns></returns>
         public static string GetFullQualifiedLayerName(SdeConnectionInfo sdeConInfo, string layerName)
         {
-            return $"{sdeConInfo.Server}.{sdeConInfo.TableOwner}.{layerName}";
+            return $"{sdeConInfo.Server}.{sdeConInfo.DefaultTableOwner}.{layerName}";
         }
         #endregion
 

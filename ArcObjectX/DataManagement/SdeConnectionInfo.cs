@@ -20,9 +20,9 @@ namespace ArcObjectX.DataManagement
         /// </summary>
         public string Version { get; set; }
         /// <summary>
-        /// Default table owner that use to open layer.
+        /// Default table owner that use to open layer or table.
         /// </summary>
-        public string TableOwner { get; set; }
+        public string DefaultTableOwner { get; set; }
 
         /// <summary>
         /// DB Client text. Ex. SQLServer, Oracle, etc.
@@ -43,16 +43,25 @@ namespace ArcObjectX.DataManagement
 
         public string ToLongString()
         {
-            return ToString() + $", TableOwner={TableOwner}, DbClient = {DbClient.ToIPropertyString()}";
+            return ToString() + $", DefaultTableOwner={DefaultTableOwner}, DbClient = {DbClient.ToIPropertyString()}";
         }
 
         /// <summary>
-        /// Get Datasource path liked string. Ex. \\Server\DBName\User\Version\TableOwner
+        /// Get Datasource path liked string. Ex. \\Server\DBName\User\Version
         /// </summary>
         /// <returns></returns>
         public string ToDsPathLikedString()
         {
-            return $"\\\\{Server}\\{DBName}\\{User}\\{Version}\\{TableOwner}";
+            return $"\\\\{Server}\\{DBName}\\{User}\\{Version}";
+        }
+
+        /// <summary>
+        /// Get Datasource path liked string. Ex. \\Server\DBName\User\Version\DefaultTableOwner
+        /// </summary>
+        /// <returns></returns>
+        public string ToDsPathLikedStringWithDefaultTableOwner()
+        {
+            return $"\\\\{Server}\\{DBName}\\{User}\\{Version}\\{DefaultTableOwner}";
         }
     }
 }

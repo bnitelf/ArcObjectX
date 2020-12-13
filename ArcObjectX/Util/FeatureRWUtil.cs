@@ -382,7 +382,37 @@ namespace ArcObjectX.Util
         {
             return ReadDatetimeIfAny(ft as IRow, fieldName, defaultValue);
         }
-        
+
+        /// <summary>
+        /// Get Shape_Length value. if field not exist in row value return 0.
+        /// </summary>
+        /// <param name="ft"></param>
+        /// <returns></returns>
+        public static double ReadShapeLengthIfAny(IFeature ft)
+        {
+            IFeatureClass fclass = ft.Class as IFeatureClass;
+            double shapeLength = ReadDoubleIfAny(ft, fclass.LengthField.Name);
+            return shapeLength;
+        }
+
+        /// <summary>
+        /// Get Shape_Area value. if field not exist in row value return 0.
+        /// </summary>
+        /// <param name="ft"></param>
+        /// <returns></returns>
+        public static double ReadShapeAreaIfAny(IFeature ft)
+        {
+            IFeatureClass fclass = ft.Class as IFeatureClass;
+            double shapeArea = ReadDoubleIfAny(ft, fclass.AreaField.Name);
+            return shapeArea;
+        }
+
+        /// <summary>
+        /// Read row by auto map to T object's properties.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="row"></param>
+        /// <returns></returns>
         public static T Read<T>(IRow row)
         {
             Type t = typeof(T).GetType();
@@ -416,6 +446,112 @@ namespace ArcObjectX.Util
 
             return record;
         }
+
+        /// <summary>
+        /// Read field then convert to C# type like (int?, double?, Datetime?, etc).
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="fieldIndex"></param>
+        /// <param name="ignoreNotSupportFieldType">if ignore exception will not throw, otherwise throw.</param>
+        /// <returns></returns>
+        public static object ReadToCSharpType(IRow row, int fieldIndex, bool ignoreNotSupportFieldType = false)
+        {
+            esriFieldType fieldType = row.Fields.Field[fieldIndex].Type;
+            object arcObjectValue;
+
+            switch (fieldType)
+            {
+                case esriFieldType.esriFieldTypeSmallInteger:
+                    short? valueShort = null;
+                    arcObjectValue = row.Value[fieldIndex];
+                    if (arcObjectValue != DBNull.Value)
+                    {
+                        valueShort = arcObjectValue as short?;
+                    }
+                    return valueShort;
+                    break;
+
+                case esriFieldType.esriFieldTypeInteger:
+                case esriFieldType.esriFieldTypeOID:
+                    int? valueInt = null;
+                    long? valueLong = null;
+                    arcObjectValue = row.Value[fieldIndex];
+                    if (arcObjectValue != DBNull.Value)
+                    {
+                        try
+                        {
+                            valueInt = (int?)arcObjectValue;
+                            return valueInt;
+                        }
+                        catch (Exception ex)
+                        {
+                            valueLong = (long?)arcObjectValue;
+                            return valueLong;
+                        }
+                    }
+                    return valueInt;
+                    break;
+
+                case esriFieldType.esriFieldTypeSingle:
+                    float? valueFloat = null;
+                    arcObjectValue = row.Value[fieldIndex];
+                    if (arcObjectValue != DBNull.Value)
+                    {
+                        valueFloat = arcObjectValue as float?;
+                    }
+                    return valueFloat;
+                    break;
+
+                case esriFieldType.esriFieldTypeDouble:
+                    double? valueDouble = null;
+                    arcObjectValue = row.Value[fieldIndex];
+                    if (arcObjectValue != DBNull.Value)
+                    {
+                        valueDouble = arcObjectValue as double?;
+                    }
+                    return valueDouble;
+                    break;
+
+                case esriFieldType.esriFieldTypeString:
+                    string valueString = null;
+                    arcObjectValue = row.Value[fieldIndex];
+                    if (arcObjectValue != DBNull.Value)
+                    {
+                        valueString = arcObjectValue.ToString();
+                    }
+                    return valueString;
+                    break;
+
+                case esriFieldType.esriFieldTypeDate:
+                    DateTime? valueDateTime = null;
+                    arcObjectValue = row.Value[fieldIndex];
+                    if (arcObjectValue != DBNull.Value)
+                    {
+                        valueDateTime = arcObjectValue as DateTime?;
+                    }
+                    return valueDateTime;
+                    break;
+
+                case esriFieldType.esriFieldTypeGeometry:
+                case esriFieldType.esriFieldTypeBlob:
+                case esriFieldType.esriFieldTypeRaster:
+                case esriFieldType.esriFieldTypeGUID:
+                case esriFieldType.esriFieldTypeGlobalID:
+                case esriFieldType.esriFieldTypeXML:
+                default:
+                    if (ignoreNotSupportFieldType)
+                    {
+                        return null;
+                    }
+                    else
+                    {
+                        throw new NotSupportedException($"Field type ({fieldType}) is not support yet.");
+                    }
+                    break;
+            }
+        }
+
+
         #endregion
 
         #region Write Field
