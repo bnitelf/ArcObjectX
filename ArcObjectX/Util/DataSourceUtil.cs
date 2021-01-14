@@ -1,8 +1,10 @@
 ﻿using ArcObjectX.DataManagement;
+using ESRI.ArcGIS.ADF;
 using ESRI.ArcGIS.DataSourcesFile;
 using ESRI.ArcGIS.DataSourcesGDB;
 using ESRI.ArcGIS.esriSystem;
 using ESRI.ArcGIS.Geodatabase;
+using ESRI.ArcGIS.Geometry;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -54,7 +56,7 @@ namespace ArcObjectX.Util
         public static IWorkspace Open(string datasourcePath)
         {
             IWorkspace workspace = null;
-            string ext = Path.GetExtension(datasourcePath).ToUpper();
+            string ext = System.IO.Path.GetExtension(datasourcePath).ToUpper();
             switch (ext)
             {
                 case ".SDE":
@@ -120,7 +122,7 @@ namespace ArcObjectX.Util
             string folderPath = datasourcePath;
             if (datasourcePath.EndsWith(".shp", StringComparison.OrdinalIgnoreCase))
             {
-                folderPath = Path.GetDirectoryName(datasourcePath);
+                folderPath = System.IO.Path.GetDirectoryName(datasourcePath);
             }
 
             IWorkspaceFactory workspaceFactory = new ShapefileWorkspaceFactory();
@@ -438,6 +440,37 @@ namespace ArcObjectX.Util
 
             return versionNames;
         }
+
+        public static bool IsSDEVersionExist(IWorkspace workspace, string version)
+        {
+            IVersionedWorkspace versionedWorkspace = workspace as IVersionedWorkspace;
+            IVersion iVersion = null;
+            try
+            {
+                if (versionedWorkspace != null)
+                {
+                    iVersion = versionedWorkspace.FindVersion(version);
+                    if (iVersion != null)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            finally
+            {
+                if (versionedWorkspace != null)
+                {
+                    ComReleaser.ReleaseCOMObject(versionedWorkspace);
+                    versionedWorkspace = null;
+                }
+                if (iVersion != null)
+                {
+                    ComReleaser.ReleaseCOMObject(iVersion);
+                    iVersion = null;
+                }
+            }
+        }
         #endregion
 
         #region Create Datasource
@@ -448,7 +481,7 @@ namespace ArcObjectX.Util
         /// <param name="datasourcePath"></param>
         public static void Create(string datasourcePath)
         {
-            string ext = Path.GetExtension(datasourcePath).ToUpper();
+            string ext = System.IO.Path.GetExtension(datasourcePath).ToUpper();
             switch (ext)
             {
                 case ".GDB":
@@ -486,7 +519,7 @@ namespace ArcObjectX.Util
             string folderPath = datasourcePath;
             if (datasourcePath.EndsWith(".shp", StringComparison.OrdinalIgnoreCase))
             {
-                folderPath = Path.GetDirectoryName(datasourcePath);
+                folderPath = System.IO.Path.GetDirectoryName(datasourcePath);
             }
 
             // todo: [Nut] recheck if correct
@@ -496,8 +529,8 @@ namespace ArcObjectX.Util
 
         private static void Create(string datasourcePath, IWorkspaceFactory workspaceFactory)
         {
-            string parentFolderPath = Path.GetDirectoryName(datasourcePath);
-            string fileName = Path.GetFileName(datasourcePath);
+            string parentFolderPath = System.IO.Path.GetDirectoryName(datasourcePath);
+            string fileName = System.IO.Path.GetFileName(datasourcePath);
             IWorkspaceName workspaceName = workspaceFactory.Create(parentFolderPath, fileName, null, 0);
 
             //// Cast the workspace name object to the IName interface and open the workspace.
@@ -514,8 +547,8 @@ namespace ArcObjectX.Util
             IPropertySet propertySet = CreateSdeIPropertySet(server, dbname, user, pass, version, dbClient);
             IWorkspaceFactory workspaceFactory = new SdeWorkspaceFactoryClass();
 
-            string parentFolderPath = Path.GetDirectoryName(sdeConnectionFilepath);
-            string fileName = Path.GetFileName(sdeConnectionFilepath);
+            string parentFolderPath = System.IO.Path.GetDirectoryName(sdeConnectionFilepath);
+            string fileName = System.IO.Path.GetFileName(sdeConnectionFilepath);
 
             workspaceFactory.Create(parentFolderPath, fileName, propertySet, 0);
         }
@@ -554,10 +587,20 @@ namespace ArcObjectX.Util
 
             return false;
         }
+
+        public static bool IsDatasetExist(IWorkspace workspace, string datasetName)
+        {
+            if (((IWorkspace2)workspace).NameExists[esriDatasetType.esriDTFeatureDataset, datasetName])
+            {
+                return true;
+            }
+
+            return false;
+        }
         #endregion
 
 
-        #region Get Layer / Table
+        #region Get Layer / Table / Dataset
         public static IFeatureClass GetFeatureClass(IWorkspace workspace, string featureClassName)
         {
             IFeatureWorkspace ftWorkspace = workspace as IFeatureWorkspace;
@@ -647,6 +690,63 @@ namespace ArcObjectX.Util
             result = result.Where(x => !x.EndsWith("__ATTACH", StringComparison.OrdinalIgnoreCase)).ToList();
             return result;
         }
+
+        /// <summary>
+        /// Get dataset name of the specified layer / table.
+        /// </summary>
+        /// <param name="workspace"></param>
+        /// <param name="layerName">layer / table name.</param>
+        /// <returns></returns>
+        /// <exception cref="MTCoreLayerNotExistException">If layer or table is not exist.</exception>
+        public static string GetDatasetNameOfLayer(IWorkspace workspace, string layerName)
+        {
+            if (!IsLayerExist(workspace, layerName))
+            {
+                string dsPath = GetDataSourcePath(workspace);
+                throw new Exception($"Layer or table \"{layerName}\" not exists in {dsPath}");
+            }
+
+            IEnumDatasetName enumDatasetNames = workspace.DatasetNames[esriDatasetType.esriDTFeatureDataset];
+            IEnumDatasetName enumDatasetNamesSub;
+            IDatasetName datasetName;
+            IDatasetName datasetNameSub;
+
+            string datasetNameStr;
+            string layerNameStr;
+
+            try
+            {
+                // Will loop through top level only eg. dataset name, feature class, table
+                while ((datasetName = enumDatasetNames.Next()) != null)
+                {
+                    datasetNameStr = datasetName.Name;
+
+                    enumDatasetNamesSub = datasetName.SubsetNames;
+                    if (enumDatasetNamesSub != null)
+                    {
+                        while ((datasetNameSub = enumDatasetNamesSub.Next()) != null)
+                        {
+                            layerNameStr = datasetNameSub.Name;
+                            if (layerNameStr.Equals(layerName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                // has dataset.
+                                return datasetNameStr;
+                            }
+                        }
+                    }
+                }
+
+                // this layer not has dataset.
+                return "";
+            }
+            finally
+            {
+                enumDatasetNames = null;
+                enumDatasetNamesSub = null;
+                datasetName = null;
+                datasetNameSub = null;
+            }
+        }
         #endregion
 
 
@@ -695,6 +795,12 @@ namespace ArcObjectX.Util
         #endregion
 
         #region Create Layer / Table
+        public static IFeatureDataset CreateDataset(IWorkspace workspace, string datasetName, ISpatialReference spatialRef)
+        {
+            IFeatureWorkspace ftWorkspace = (IFeatureWorkspace)workspace;
+            return ftWorkspace.CreateFeatureDataset(datasetName, spatialRef);
+        }
+
         /// <summary>
         /// Create feature class. If exist open feature class.
         /// </summary>
@@ -895,6 +1001,242 @@ namespace ArcObjectX.Util
 
             return table;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="workspace"></param>
+        /// <param name="datasetName">blank if create feature class in top level</param>
+        /// <param name="featureClassName"></param>
+        /// <param name="geoType"></param>
+        /// <param name="spatialReference"></param>
+        /// <param name="listDataFields">Fields to be create. Do not add geometry type and standard fields in the list.</param>
+        /// <param name="strConfigKeyword">blank if not addition config keyword, see ArcObject doc for more info</param>
+        /// <returns></returns>
+        public static IFeatureClass CreateFeatureClass(IWorkspace workspace, string datasetName
+                                                        , string featureClassName, esriGeometryType geoType, ISpatialReference spatialReference
+                                                        , List<FieldInfo> listDataFields, string strConfigKeyword)
+        {
+            if (string.IsNullOrWhiteSpace(featureClassName))
+                throw new ArgumentNullException("featureClassName", "Must not null or blank");
+            if (spatialReference == null)
+                throw new ArgumentNullException("spatialReference", "Must not null");
+
+            IFeatureClass featureClass = null;
+            IFeatureWorkspace featureWorkspace = workspace as IFeatureWorkspace;
+            IWorkspace2 workspace2 = workspace as IWorkspace2;
+
+            try
+            {
+                //// Feature class with that name already exists 
+                //if (workspace2.get_NameExists(esriDatasetType.esriDTFeatureClass, featureClassName)) 
+                //{
+                //    featureClass = featureWorkspace.OpenFeatureClass(featureClassName);
+                //    return featureClass;
+                //}
+
+                // Assign the class id value (of FeatureClass type)
+                UID CLSID = new UIDClass();
+                CLSID.Value = "esriGeoDatabase.Feature";
+
+                UID CLSEXT = null;
+
+                IObjectClassDescription objectClassDescription = new FeatureClassDescriptionClass();
+
+                IFields fields = null;
+                IField field = null;
+                string strShapeField = "";
+
+                Func<FieldInfo, IField> funcConvertToIField = (dataFieldInfo) =>
+                {
+                    field = new FieldClass();
+                    IFieldEdit fieldEdit = field as IFieldEdit;
+                    fieldEdit.Name_2 = dataFieldInfo.FieldName;
+                    fieldEdit.Type_2 = TypeUtil.ToEsriFieldType(dataFieldInfo.FieldType);
+                    fieldEdit.IsNullable_2 = dataFieldInfo.Nullable;
+                    fieldEdit.AliasName_2 = dataFieldInfo.FieldName;
+                    fieldEdit.DefaultValue_2 = dataFieldInfo.DefaultValue;
+                    fieldEdit.Editable_2 = true;
+                    fieldEdit.Length_2 = dataFieldInfo.Width;
+                    fieldEdit.Precision_2 = dataFieldInfo.Width;
+                    fieldEdit.Scale_2 = dataFieldInfo.Precision;
+                    return field;
+                };
+
+                // if a fields collection is not passed in then supply our own
+                // create the fields using the required fields method (default, required fields)
+                fields = objectClassDescription.RequiredFields;
+                if (listDataFields == null || listDataFields.Count == 0)
+                {
+
+                }
+                else
+                {
+                    FieldInfo dataFieldInfo = null;
+                    IFieldsEdit fieldsEdit = fields as IFieldsEdit;
+                    for (int i = 0; i < listDataFields.Count; i++)
+                    {
+                        dataFieldInfo = listDataFields[i];
+                        field = funcConvertToIField(dataFieldInfo);
+                        fieldsEdit.AddField(field);
+                    }
+                }
+
+                // Locate the shape field
+                IGeometryDef geometryDef = null;
+                IGeometryDefEdit geometryDefEdit = null;
+
+                for (int j = 0; j < fields.FieldCount; j++)
+                {
+                    if (fields.get_Field(j).Type == esriFieldType.esriFieldTypeGeometry)
+                    {
+                        strShapeField = fields.get_Field(j).Name;
+
+                        // Set geometry type and SpatialReference
+                        geometryDef = field.GeometryDef;
+                        geometryDefEdit = geometryDef as IGeometryDefEdit;
+                        geometryDefEdit.GeometryType_2 = geoType;
+                        geometryDefEdit.SpatialReference_2 = spatialReference;
+                    }
+                }
+
+                // Use IFieldChecker to create a validated fields collection.
+                IFieldChecker fieldChecker = new FieldCheckerClass();
+                IEnumFieldError enumFieldError = null;
+                IFields validatedFields = null;
+                fieldChecker.ValidateWorkspace = workspace;
+                fieldChecker.Validate(fields, out enumFieldError, out validatedFields);
+
+                // The enumFieldError enumerator can be inspected at this point to determine 
+                // which fields were modified during validation.
+
+                // Finally create and return the feature class
+
+                if (string.IsNullOrWhiteSpace(datasetName))// if no feature dataset passed in, create at the workspace level
+                {
+                    featureClass = featureWorkspace.CreateFeatureClass(featureClassName, validatedFields, CLSID, CLSEXT, esriFeatureType.esriFTSimple, strShapeField, strConfigKeyword);
+                }
+                else
+                {
+                    IFeatureDataset featureDataset = null;
+                    if (!IsDatasetExist(workspace, datasetName))
+                    {
+                        featureDataset = featureWorkspace.CreateFeatureDataset(datasetName, spatialReference);
+                    }
+                    else
+                    {
+                        featureDataset = featureWorkspace.OpenFeatureDataset(datasetName);
+                    }
+                    featureClass = featureDataset.CreateFeatureClass(featureClassName, validatedFields, CLSID, CLSEXT, esriFeatureType.esriFTSimple, strShapeField, strConfigKeyword);
+                }
+
+                return featureClass;
+            }
+            finally
+            {
+                featureClass = null;
+                featureWorkspace = null;
+                workspace2 = null;
+            }
+        }
+
+        /// <summary>
+        /// (ESRI) Table can not be create in dataset.
+        /// </summary>
+        /// <param name="workspace"></param>
+        /// <param name="tableName"></param>
+        /// <param name="listDataFields">Fields to be create. Do not add geometry type and standard fields in the list.</param>
+        /// <param name="strConfigKeyword">blank if not addition config keyword, see ArcObject doc for more info</param>
+        /// <returns></returns>
+        public static ITable CreateTable(IWorkspace workspace,
+                                                string tableName, List<FieldInfo> listDataFields,
+                                                string strConfigKeyword)
+        {
+            if (string.IsNullOrWhiteSpace(tableName))
+                throw new ArgumentNullException("tableName", "Must not null or blank");
+
+            ITable table = null;
+            IFeatureWorkspace featureWorkspace = workspace as IFeatureWorkspace;
+            IWorkspace2 workspace2 = workspace as IWorkspace2;
+
+            try
+            {
+                //// Feature class with that name already exists 
+                //if (workspace2.get_NameExists(esriDatasetType.esriDTFeatureClass, featureClassName)) 
+                //{
+                //    featureClass = featureWorkspace.OpenFeatureClass(featureClassName);
+                //    return featureClass;
+                //}
+
+                // Assign the class id value (of FeatureClass type)
+                UID CLSID = new UIDClass();
+                CLSID.Value = "esriGeoDatabase.Object";
+
+                UID CLSEXT = null;
+
+                IObjectClassDescription objectClassDescription = new ObjectClassDescriptionClass();
+
+                IFields fields = null;
+                IField field = null;
+
+                Func<FieldInfo, IField> funcConvertToIField = (dataFieldInfo) =>
+                {
+                    field = new FieldClass();
+                    IFieldEdit fieldEdit = field as IFieldEdit;
+                    fieldEdit.Name_2 = dataFieldInfo.FieldName;
+                    fieldEdit.Type_2 = TypeUtil.ToEsriFieldType(dataFieldInfo.FieldType);
+                    fieldEdit.IsNullable_2 = dataFieldInfo.Nullable;
+                    fieldEdit.AliasName_2 = dataFieldInfo.FieldName;
+                    fieldEdit.DefaultValue_2 = dataFieldInfo.DefaultValue;
+                    fieldEdit.Editable_2 = true;
+                    fieldEdit.Length_2 = dataFieldInfo.Width;
+                    fieldEdit.Precision_2 = dataFieldInfo.Width;
+                    fieldEdit.Scale_2 = dataFieldInfo.Precision;
+                    return field;
+                };
+
+                // if a fields collection is not passed in then supply our own
+                // create the fields using the required fields method (default, required fields)
+                fields = objectClassDescription.RequiredFields;
+                if (listDataFields == null || listDataFields.Count == 0)
+                {
+
+                }
+                else
+                {
+                    FieldInfo dataFieldInfo = null;
+                    IFieldsEdit fieldsEdit = fields as IFieldsEdit;
+                    for (int i = 0; i < listDataFields.Count; i++)
+                    {
+                        dataFieldInfo = listDataFields[i];
+                        field = funcConvertToIField(dataFieldInfo);
+                        fieldsEdit.AddField(field);
+                    }
+                }
+
+                // Use IFieldChecker to create a validated fields collection.
+                IFieldChecker fieldChecker = new FieldCheckerClass();
+                IEnumFieldError enumFieldError = null;
+                IFields validatedFields = null;
+                fieldChecker.ValidateWorkspace = workspace;
+                fieldChecker.Validate(fields, out enumFieldError, out validatedFields);
+
+                // The enumFieldError enumerator can be inspected at this point to determine 
+                // which fields were modified during validation.
+
+                // Finally create and return the table
+                table = featureWorkspace.CreateTable(tableName, validatedFields, CLSID, CLSEXT, strConfigKeyword);
+
+                return table;
+            }
+            finally
+            {
+                table = null;
+                featureWorkspace = null;
+                workspace2 = null;
+            }
+        }
+
 
         /// <summary>
         /// Copy schema of specified layer from workspaceSrc to workspaceDest.
