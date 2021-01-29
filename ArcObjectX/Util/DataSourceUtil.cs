@@ -1,5 +1,6 @@
 ﻿using ArcObjectX.DataManagement;
 using ESRI.ArcGIS.ADF;
+using ESRI.ArcGIS.Carto;
 using ESRI.ArcGIS.DataSourcesFile;
 using ESRI.ArcGIS.DataSourcesGDB;
 using ESRI.ArcGIS.esriSystem;
@@ -397,6 +398,7 @@ namespace ArcObjectX.Util
 
         /// <summary>
         /// Return SDE version name if workspace is SDE datasource, otherwise blank.
+        /// Example: sde.DEFAULT
         /// </summary>
         /// <param name="workspace"></param>
         /// <returns></returns>
@@ -418,6 +420,11 @@ namespace ArcObjectX.Util
             return versionName;
         }
 
+        /// <summary>
+        /// Example: sde.DEFAULT
+        /// </summary>
+        /// <param name="workspace"></param>
+        /// <returns></returns>
         public static List<string> GetAllSDEVersionName(IWorkspace workspace)
         {
             List<string> versionNames = new List<string>();
@@ -638,6 +645,34 @@ namespace ArcObjectX.Util
                 throw new Exception($"Can not get table \"{tableName}\" from {dsPath}.");
             }
             return table;
+        }
+
+        /// <summary>
+        /// Get ILayer for use with TOC control (eg. add to TOC or Map).
+        /// </summary>
+        /// <param name="workspace"></param>
+        /// <param name="layerName"></param>
+        /// <returns></returns>
+        public static ILayer GetLayer(IWorkspace workspace, string layerName)
+        {
+            ILayer layer = null;
+            IFeatureLayer featureLayer = new FeatureLayerClass();
+            IFeatureClass fclass = null;
+
+            try
+            {
+                fclass = GetFeatureClass(workspace, layerName);
+                featureLayer.FeatureClass = fclass;
+                featureLayer.Name = fclass.AliasName;
+                layer = featureLayer as ILayer;
+                return layer;
+            }
+            finally
+            {
+                layer = null;
+                featureLayer = null;
+                fclass = null;
+            }
         }
 
         public static List<string> GetAllLayerName(IWorkspace workspace)
@@ -1015,7 +1050,7 @@ namespace ArcObjectX.Util
         /// <returns></returns>
         public static IFeatureClass CreateFeatureClass(IWorkspace workspace, string datasetName
                                                         , string featureClassName, esriGeometryType geoType, ISpatialReference spatialReference
-                                                        , List<FieldInfo> listDataFields, string strConfigKeyword)
+                                                        , List<DataManagement.FieldInfo> listDataFields, string strConfigKeyword)
         {
             if (string.IsNullOrWhiteSpace(featureClassName))
                 throw new ArgumentNullException("featureClassName", "Must not null or blank");
@@ -1047,7 +1082,7 @@ namespace ArcObjectX.Util
                 IField field = null;
                 string strShapeField = "";
 
-                Func<FieldInfo, IField> funcConvertToIField = (dataFieldInfo) =>
+                Func<DataManagement.FieldInfo, IField> funcConvertToIField = (dataFieldInfo) =>
                 {
                     field = new FieldClass();
                     IFieldEdit fieldEdit = field as IFieldEdit;
@@ -1072,7 +1107,7 @@ namespace ArcObjectX.Util
                 }
                 else
                 {
-                    FieldInfo dataFieldInfo = null;
+                    DataManagement.FieldInfo dataFieldInfo = null;
                     IFieldsEdit fieldsEdit = fields as IFieldsEdit;
                     for (int i = 0; i < listDataFields.Count; i++)
                     {
@@ -1149,7 +1184,7 @@ namespace ArcObjectX.Util
         /// <param name="strConfigKeyword">blank if not addition config keyword, see ArcObject doc for more info</param>
         /// <returns></returns>
         public static ITable CreateTable(IWorkspace workspace,
-                                                string tableName, List<FieldInfo> listDataFields,
+                                                string tableName, List<DataManagement.FieldInfo> listDataFields,
                                                 string strConfigKeyword)
         {
             if (string.IsNullOrWhiteSpace(tableName))
@@ -1179,7 +1214,7 @@ namespace ArcObjectX.Util
                 IFields fields = null;
                 IField field = null;
 
-                Func<FieldInfo, IField> funcConvertToIField = (dataFieldInfo) =>
+                Func<DataManagement.FieldInfo, IField> funcConvertToIField = (dataFieldInfo) =>
                 {
                     field = new FieldClass();
                     IFieldEdit fieldEdit = field as IFieldEdit;
@@ -1204,7 +1239,7 @@ namespace ArcObjectX.Util
                 }
                 else
                 {
-                    FieldInfo dataFieldInfo = null;
+                    DataManagement.FieldInfo dataFieldInfo = null;
                     IFieldsEdit fieldsEdit = fields as IFieldsEdit;
                     for (int i = 0; i < listDataFields.Count; i++)
                     {

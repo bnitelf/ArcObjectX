@@ -1,4 +1,5 @@
-﻿using ESRI.ArcGIS.esriSystem;
+﻿using ESRI.ArcGIS.Carto;
+using ESRI.ArcGIS.esriSystem;
 using ESRI.ArcGIS.Geodatabase;
 using ESRI.ArcGIS.Geometry;
 using ESRI.ArcGIS.Geoprocessor;
@@ -38,6 +39,31 @@ namespace ArcObjectX.Util
         }
 
         /// <summary>
+        /// Convert IFeatureClass to ILayer.
+        /// </summary>
+        /// <param name="fclass"></param>
+        /// <returns></returns>
+        public static ILayer ToILayer(IFeatureClass fclass)
+        {
+            ILayer layer = null;
+            IFeatureLayer featureLayer = new FeatureLayerClass();
+
+            try
+            {
+                featureLayer.FeatureClass = fclass;
+                featureLayer.Name = fclass.AliasName;
+                layer = featureLayer as ILayer;
+                return layer;
+            }
+            finally
+            {
+                fclass = null;
+                layer = null;
+                featureLayer = null;
+            }
+        }
+
+        /// <summary>
         /// Get feature class / table name.
         /// </summary>
         /// <param name="fclass"></param>
@@ -57,6 +83,8 @@ namespace ArcObjectX.Util
         /// <summary>
         /// Get feature class / table name without table owner.
         /// Useful for sde datasource.
+        /// Example layer name in SDE will be {SDEDatabase}.{TableOwner}.{LayerName}
+        /// <para>Will Return {LayerName}</para>
         /// </summary>
         /// <param name="table"></param>
         /// <returns></returns>
@@ -71,6 +99,8 @@ namespace ArcObjectX.Util
         /// <summary>
         /// Get feature class / table name without table owner.
         /// Useful for sde datasource.
+        /// Example layer name in SDE will be {SDEDatabase}.{TableOwner}.{LayerName}
+        /// <para>Will Return {LayerName}</para>
         /// </summary>
         /// <param name="table"></param>
         /// <returns></returns>
@@ -80,6 +110,59 @@ namespace ArcObjectX.Util
             string layerName = ds.Name;
             string layerNameWithoutOwner = layerName.Split('.').Last();
             return layerNameWithoutOwner;
+        }
+
+
+        /// <summary>
+        /// Get SDE layer name prefix.
+        /// Useful for SDE datasource.
+        /// Example layer name in SDE will be {SDEDatabase}.{TableOwner}.{LayerName}
+        /// <para>Will Return {SDEDatabase}.{TableOwner}</para>
+        /// </summary>
+        /// <param name="featureClass"></param>
+        /// <returns></returns>
+        public static string GetLayerSDEPrefix(IFeatureClass featureClass)
+        {
+            IDataset ds = featureClass as IDataset;
+
+            try
+            {
+                string layerName = ds.Name;
+                string layerNameWithoutOwner = layerName.Split('.').Last();
+                string sdePrefix = layerName.Replace($".{layerNameWithoutOwner}", "");
+                return sdePrefix;
+            }
+            finally
+            {
+                featureClass = null;
+                ds = null;
+            }
+        }
+
+        /// <summary>
+        /// Get SDE layer name prefix.
+        /// Useful for SDE datasource.
+        /// Example layer name in SDE will be {SDEDatabase}.{TableOwner}.{LayerName}
+        /// <para>Will Return {SDEDatabase}.{TableOwner}</para>
+        /// </summary>
+        /// <param name="featureClass"></param>
+        /// <returns></returns>
+        public static string GetLayerSDEPrefix(ITable table)
+        {
+            IDataset ds = table as IDataset;
+
+            try
+            {
+                string layerName = ds.Name;
+                string layerNameWithoutOwner = layerName.Split('.').Last();
+                string sdePrefix = layerName.Replace($".{layerNameWithoutOwner}", "");
+                return sdePrefix;
+            }
+            finally
+            {
+                table = null;
+                ds = null;
+            }
         }
 
         /// <summary>
