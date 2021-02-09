@@ -210,7 +210,7 @@ namespace ArcObjectX.DataManagement.Tool
 
             // Skip fields
             SkipFields.Add(fclassDest.OIDFieldName.ToUpper());
-            SkipFields.Add(fclassDest.ShapeFieldName.ToUpper());
+            //SkipFields.Add(fclassDest.ShapeFieldName.ToUpper());
 
             string layerNameDest = ((IDataset)fclassDest).Name;
 
@@ -247,7 +247,7 @@ namespace ArcObjectX.DataManagement.Tool
                     ftDest = ftBufferDest as IFeature;
 
                     // Graphic
-                    ftDest.Shape = ftSrc.Shape;
+                    //ftDest.Shape = ftSrc.Shape;
 
                     // Attribute
                     // Loop Dest fields

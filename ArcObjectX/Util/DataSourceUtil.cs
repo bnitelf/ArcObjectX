@@ -1128,7 +1128,7 @@ namespace ArcObjectX.Util
                         strShapeField = fields.get_Field(j).Name;
 
                         // Set geometry type and SpatialReference
-                        geometryDef = field.GeometryDef;
+                        geometryDef = fields.get_Field(j).GeometryDef;
                         geometryDefEdit = geometryDef as IGeometryDefEdit;
                         geometryDefEdit.GeometryType_2 = geoType;
                         geometryDefEdit.SpatialReference_2 = spatialReference;
