@@ -20,6 +20,25 @@ namespace ArcObjectX_Sample.ExampleLoopLayer
                 return new List<string>();
                 //return 1;
             });
+
+
+            List<IQueryFilter> ListQcQueryFilter = new List<IQueryFilter>();
+            int countAll = LayerLooper.Loop(fclass, ListQcQueryFilter, readOnly, (feature) =>
+            {
+                // do somethings
+                return true; // = continue; in loop.
+
+                Console.WriteLine("This code will be skip like you use continue; statement.");
+            });
+
+            int countOnlyLoopSuccess = LayerLooper.Loop(fclass, ListQcQueryFilter, readOnly, (feature) =>
+            {
+                // do somethings
+                return false; // = break; in loop.
+
+                Console.WriteLine("This code will be skip like you use break; statement.");
+            });
+
         }
     }
 }
