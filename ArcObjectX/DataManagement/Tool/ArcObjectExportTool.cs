@@ -11,25 +11,26 @@ namespace ArcObjectX.DataManagement.Tool
     {
         GDB,
         MDB,
-        SHP,
-        SDE
+        SHP
     }
 
     public class ArcObjectExportTool<T>
-    {        
-        private OutputType _OutputType;
-        private int _SaveEveryNRecord = 0;
-        private List<T> _LstInfo = null;
-        private bool _IsExportAll = true;
-        private Dictionary<string, string> _DicMapping = null;
+    {
+        private Action<int> _ActionCallBack;
+        private OutputType _OutputType = OutputType.GDB;
+        private int _SaveEveryNRecord;
+        private List<T> _LstInfo;
+        private IFeatureClass _SrcFeatureClass;
+        private Dictionary<string, string> _DicMapping;
 
         private IFeatureClass _DesFeatureClass = null;
 
-        public ArcObjectExportTool<T> OutputType(OutputType outputType)
+        public Action<int> SetCallBack
         {
-            this._OutputType = outputType;
-
-            return this;
+            set
+            {
+                _ActionCallBack = value;
+            }
         }
 
         /// <summary>
@@ -62,24 +63,36 @@ namespace ArcObjectX.DataManagement.Tool
             return this;
         }
 
-        public ArcObjectExportTool<T> ExportAll(bool isExportAll = true)
+        /// <summary>
+        /// Set source Featureclass for export (copy)
+        /// </summary>
+        public ArcObjectExportTool<T> ExportInfo(IFeatureClass featureClass)
         {
-            this._IsExportAll = isExportAll;
+            this._SrcFeatureClass = featureClass;
 
             return this;
         }
 
+        /// <summary>
+        /// Mapping Field between Property field and destination field
+        /// </summary>
         public ArcObjectExportTool<T> MappingField(Expression<Func<T , object>> expression , string desFieldName)
         {
-            // Get name from Expression
+            /// create dictionary for keep mapping 
+            if (_DicMapping == null) _DicMapping = new Dictionary<string, string>();
+
+            /// Get name from Expression
             string keyName = GetExpressionValue(expression);
 
-            // Add name to key of Dictionary
+            /// Add name to key of Dictionary
             _DicMapping.Add(keyName, desFieldName);
 
             return this;
         }
 
+        /// <summary>
+        /// Get value from expression
+        /// </summary>
         private string GetExpressionValue(Expression expression)
         {
             LambdaExpression lambdaExpression = expression as LambdaExpression;
@@ -89,68 +102,82 @@ namespace ArcObjectX.DataManagement.Tool
             return memberExpression.Member.Name;
         }
 
+        /// <summary>
+        /// Add Value to destination
+        /// </summary>
         public void Insert()
         {
             int currentRow = 0;
 
-            // Check output is GDB or not
-            if(_OutputType == Tool.OutputType.GDB)
+            /// Check output is GDB or not
+            if(_OutputType == OutputType.GDB)
             {
-                // Cast IFeatureClass to IFeatureClassLoad for set LoadOnlyMode
-                // because LoadOnlyMode will improve performace for insert
-                // LoadOnlyMode can use only GDB and SDE type
+                /* 
+                    Cast IFeatureClass to IFeatureClassLoad for set LoadOnlyMode
+                    and because LoadOnlyMode can use only GDB and SDE type
+                    LoadOnlyMode will improve performace for insert
+                 */
                 IFeatureClassLoad fClassLoad = _DesFeatureClass as IFeatureClassLoad;
                 fClassLoad.LoadOnlyMode = true;
             }
-            
 
-            // Create IFeatureCursor for Insert 
+            #region Old code
+
+            /// Create IFeatureCursor for Insert 
             IFeatureCursor fCursor = _DesFeatureClass.Insert(true);
 
-            // Loop list Info
+            /// Loop list Info
             foreach(T info in _LstInfo)
             {
-                // Create IFeatureBuffer and cast to IFeature
+                /// Create IFeatureBuffer and cast to IFeature
                 IFeatureBuffer fBuffer = _DesFeatureClass.CreateFeatureBuffer();
                 IFeature oFeature = fBuffer as IFeature;
 
-                // Add info to IFeature
+                /// Add info to IFeature
                 AddInfo2Feature(info, oFeature);
 
-                // Insert IFeatureBuffer to IFeatureCursor
+                /// Insert IFeatureBuffer to IFeatureCursor
                 fCursor.InsertFeature(fBuffer);
 
-                // Save every N row
+                /// Save every N row
                 if (currentRow % _SaveEveryNRecord == 0)
                 {
                     fCursor.Flush();
                 }
 
-                // + Row 
+                /// Update Row 
                 currentRow++;
+
+                /// CallBack
+                int percentTotal = CalPercentageFromTotal(currentRow, _LstInfo.Count);
+                _ActionCallBack?.Invoke(percentTotal);
             }
 
-            // Save All Insert Feature
+            /// Save All Insert Feature
             fCursor.Flush();
+
+            #endregion Old code
         }
 
         private void AddInfo2Feature(T info , IFeature oFeature)
         {
-            // Check export all or export only specified property
-            if (_IsExportAll == false)
+            /// Check Dictionary Mapping have value
+            if (_DicMapping == null)
             {
-                // Loop all property in info
+                /// Get All property in Generic Type
                 PropertyInfo[] propertyInfos = typeof(T).GetProperties();
-                for(int i = 0; i < propertyInfos.Length; i++)
+
+                /// Loop all property in info
+                for (int i = 0; i < propertyInfos.Length; i++)
                 {
-                    // Find index in feature
+                    /// Find index in feature
                     int inx = oFeature.Fields.FindField(propertyInfos[i].Name);
                     if(inx >= 0)
                     {
-                        // Get value from info 
+                        /// Get value from info 
                         object objValue = propertyInfos.GetValue(i);
 
-                        // Check feature is NullAble and objValue is null set value DBNull.Value
+                        /// Check feature is NullAble and objValue is null set value DBNull.Value
                         if (oFeature.Fields.Field[inx].IsNullable == true && objValue == null)
                         {
                             oFeature.set_Value(inx, DBNull.Value);
@@ -162,6 +189,37 @@ namespace ArcObjectX.DataManagement.Tool
                     }
                 }
             }
+            else
+            {
+                Type type = typeof(T);
+
+                foreach(KeyValuePair<string , string> fieldMapping in _DicMapping)
+                {
+                    int inx = oFeature.Fields.FindField(fieldMapping.Value);
+                    if(inx >= 0)
+                    {
+                        /// Get Value from info
+                        object objValue = type.GetProperty(fieldMapping.Key).GetValue(info);
+
+                        /// Check feature is NullAble and objValue is null set value DBNull.Value
+                        if (oFeature.Fields.Field[inx].IsNullable == true && objValue == null)
+                        {
+                            oFeature.set_Value(inx, DBNull.Value);
+                        }
+                        else
+                        {
+                            oFeature.set_Value(inx, objValue);
+                        }
+                    }
+                }
+            }
+        }
+
+        private int CalPercentageFromTotal(int current, int total)
+        {
+            float percent = 0;
+            percent = (float)current / (float)total * 100;
+            return (int)percent;
         }
     }
 }

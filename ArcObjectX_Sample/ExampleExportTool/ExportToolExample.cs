@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using ESRI.ArcGIS.Geodatabase;
 
@@ -12,10 +13,9 @@ namespace ArcObjectX_Sample.ExampleExportTool
             IFeatureClass fClass = null;
 
             ArcObjectExportTool<object> arcObjectExportTool = new ArcObjectExportTool<object>();
+            arcObjectExportTool.SetCallBack = CallBack;
             arcObjectExportTool.ExportInfo(new List<object>())
-                .ExportAll(true)
                 .ExportTo(fClass)
-                .OutputType(OutputType.GDB)
                 .SaveEveryNRecord(100)
                 .Insert();
         }
@@ -25,13 +25,30 @@ namespace ArcObjectX_Sample.ExampleExportTool
             IFeatureClass fClass = null;
 
             ArcObjectExportTool<info> arcObjectExportTool = new ArcObjectExportTool<info>();
+            arcObjectExportTool.SetCallBack = CallBack;
             arcObjectExportTool.ExportInfo(new List<info>())
-                .ExportAll(false)
                 .ExportTo(fClass)
-                .OutputType(OutputType.GDB)
                 .SaveEveryNRecord(100)
                 .MappingField(x => x.Ref_OID, "Ref_OID")
                 .Insert();
+        }
+
+        public void CaseExportFeatureClass()
+        {
+            IFeatureClass srcFeatureClass = null;
+            IFeatureClass desFeatureClass = null;
+
+            ArcObjectExportTool<IFeatureClass> arcObjectExportTool = new ArcObjectExportTool<IFeatureClass>();
+            arcObjectExportTool.SetCallBack = CallBack;
+            arcObjectExportTool.ExportInfo(srcFeatureClass)
+                .ExportTo(desFeatureClass)
+                .SaveEveryNRecord(100)
+                .Insert();
+        }
+
+        public void CallBack(int value)
+        {
+            Console.WriteLine(value);
         }
     }
 
